@@ -105,7 +105,7 @@ jobs:
 ```
 
 
-The latest major version is: `v1`, which is the most recommended to use. (You can also use the latest full version: `v1.0.1`)  
+The latest major version is: `v1`, which is the most recommended to use. (You can also use the latest full version: `v1.0.2`)  
 
 
 If you are migrating from the previous `v0`, please change the `runs-on: ` to `runs-on: ubuntu-latest`
@@ -216,6 +216,7 @@ The default memory of the VM is 6144MB, you can use `mem` option to set the memo
         mem: 4096
 ...
 ```
+
 
 
 The VM is using all the cpu cores of the host by default, you can use `cpu` option to change the cpu cores:
