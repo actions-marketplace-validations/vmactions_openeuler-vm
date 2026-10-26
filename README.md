@@ -38,6 +38,7 @@ All the supported releases are here:
 
 | Release | x86_64 (amd64) | aarch64 (arm64) | riscv64 | loongarch64 |
 |---------|---------|---------|---------|---------|
+| 26.09 | ✅ (rsync,scp,sshfs,nfs,tar) | ✅ (rsync,scp,sshfs,nfs,tar) | — | — |
 | 25.09 | ✅ (rsync,scp,sshfs,nfs,tar) | ✅ (rsync,scp,sshfs,nfs,tar) | ✅ (rsync,scp,sshfs,nfs,tar) | — |
 | 24.03-LTS-SP4 | ✅ (rsync,scp,sshfs,nfs,tar) | ✅ (rsync,scp,sshfs,nfs,tar) | — | ✅ (rsync,scp,sshfs,nfs,tar) |
 | 22.03-LTS-SP4 | ✅ (rsync,scp,sshfs,nfs,tar) | ✅ (rsync,scp,sshfs,nfs,tar) | — | — |
@@ -105,7 +106,7 @@ jobs:
 ```
 
 
-The latest major version is: `v1`, which is the most recommended to use. (You can also use the latest full version: `v1.0.2`)  
+The latest major version is: `v1`, which is the most recommended to use. (You can also use the latest full version: `v1.0.4`)  
 
 
 If you are migrating from the previous `v0`, please change the `runs-on: ` to `runs-on: ubuntu-latest`
@@ -235,7 +236,7 @@ The VM is using all the cpu cores of the host by default, you can use `cpu` opti
 
 ## 5. Select release
 
-It uses [the OpenEuler 24.03-LTS-SP4](conf/default.release.conf) by default, you can use `release` option to use another version of OpenEuler:
+It uses [the OpenEuler 26.09](conf/default.release.conf) by default, you can use `release` option to use another version of OpenEuler:
 
 ```yaml
 ...
@@ -255,11 +256,11 @@ You can also give only the leading, `.` separated part of a release. The newest 
       id: test
       uses: vmactions/openeuler-vm@v1
       with:
-        release: "24"
+        release: "26"
 ...
 ```
 
-Here `release: "24"` runs the newest `24.x` release of OpenEuler. Every leading part works the same way, this action ships 22, 24, 25. Each part you give has to match in full, so a release that does not exist fails the job instead of quietly falling back to another one.
+Here `release: "26"` runs the newest `26.x` release of OpenEuler. Every leading part works the same way, this action ships 22, 24, 25, 26. Each part you give has to match in full, so a release that does not exist fails the job instead of quietly falling back to another one.
 
 ## 6. Select architecture
 
@@ -393,9 +394,32 @@ The `prepare` step (installing packages etc.) normally runs on every build. With
 ...
 ```
 
+That is all `cache-after-prepare` needs. The `cache-after-prepare-key-suffix` option below is **optional**; leave it out unless you need it.
+
+The cache key only covers the `prepare` text itself. When `prepare` runs a script from your repository, a change to that script would not rebuild the prepared image. The optional `cache-after-prepare-key-suffix` covers that case: its value is appended to the cache key, so a different value means a different cache. It can be a fixed string you bump by hand (`cache-after-prepare-key-suffix: v2`), or a hash of the files `prepare` depends on:
+
+```yml
+...
+    steps:
+    - uses: actions/checkout@v7
+    - name: Test
+      id: test
+      uses: vmactions/openeuler-vm@v1
+      with:
+        cache-after-prepare: true
+        cache-after-prepare-key-suffix: deps-${{ hashFiles('ci/install-deps.sh') }}
+        prepare: |
+          sh ci/install-deps.sh
+        run: |
+          ...
+...
+```
+
+`hashFiles()` is evaluated on the runner, relative to the workspace, so the checkout must come first. It returns an empty string when no file matches, and the key then no longer follows the file, so double-check the path.
+
 Notes:
 
-- The cache key includes a hash of the `prepare` script and the `sync` method, so changing either of them rebuilds the prepared image from the base image.
+- The cache key includes a hash of the `prepare` script and the `sync` method, so changing either of them rebuilds the prepared image from the base image. `cache-after-prepare-key-suffix` is optional and empty by default; when set, its value is appended to the key.
 - The source tree is still synchronized into the VM on every run; only the `prepare` step is skipped.
 - The first run (or any run after `prepare` changes) takes longer: the VM is shut down after `prepare`, the prepared image is cached, and the VM boots again before `run`.
 - The action output `cache-after-prepare-hit` is `true` when a prepared image was restored and `prepare` was skipped.
